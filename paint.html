@@ -71,9 +71,11 @@
  
     function init_gl(canvas) {
         try {
-            gl = canvas.getContext("webgl", {stencil:true});
+            gl = canvas.getContext("webgl", {stencil:true,
+                                             preserveDrawingBuffer:true});
             if (!gl)
-                gl = canvas.getContext("experimental-webgl", {stencil:true});
+                gl = canvas.getContext("experimental-webgl", {stencil:true,
+                                                              preserveDrawingBuffer:true});
             if (gl) {
                 
                 ensure_fullscreen();
