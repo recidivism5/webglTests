@@ -50,7 +50,7 @@
 <script id="mask-fs" type="x-shader/x-fragment">
     void main()
     {
-        gl_FragColor = vec4(1,1,1,0);
+        gl_FragColor = vec4(1,1,1,1);
     }
 </script>
 
@@ -64,9 +64,9 @@
  
     function init_gl(canvas) {
         try {
-            gl = canvas.getContext("webgl");
+            gl = canvas.getContext("webgl", {stencil:true});
             if (!gl)
-                gl = canvas.getContext("experimental-webgl");
+                gl = canvas.getContext("experimental-webgl", {stencil:true});
             if (gl) {
                 
                 ensure_fullscreen();
@@ -92,10 +92,35 @@
  
     function draw_scene() {
         //CLEAR
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
+
+        //RENDER MASK
+        gl.enable(gl.STENCIL_TEST);
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.useProgram(mask_program);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, srVB);
+        gl.vertexAttribPointer(mask_program.vertex, 3, gl.FLOAT, false, 3 * Float32Array.BYTES_PER_ELEMENT, 0);
+        gl.enableVertexAttribArray(mask_program.vertex);
+
+        gl.uniformMatrix4fv(mask_program.transform, false, maskMatrix);
+
+        gl.stencilOp(gl.KEEP, gl.KEEP, gl.REPLACE);
+        gl.stencilFunc(gl.ALWAYS, 1, 0xff);
+        gl.stencilMask(0xff);
+        gl.depthMask(false);
+        gl.colorMask(false, false, false, false);
+
+        gl.drawArrays(gl.TRIANGLES, 0, 2*3);
         
-        //RENDER DIRT to targetTexture
-        gl.bindFramebuffer(gl.FRAMEBUFFER, tempFb);
+        //RENDER DIRT
+        gl.stencilFunc(gl.EQUAL, 1, 0xff);
+        gl.stencilMask(0x00);
+        gl.depthMask(true);
+        gl.colorMask(true, true, true, true);
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         gl.useProgram(tex_program);
         gl.bindTexture(gl.TEXTURE_2D, dirtTexture);
         gl.viewport(0, 0, canvas.width, canvas.height);
@@ -113,23 +138,12 @@
 
         gl.drawArrays(gl.TRIANGLES, 0, 2*3);
 
-        //RENDER MASK TO targetTexture
-        gl.useProgram(mask_program);
-
-        gl.bindBuffer(gl.ARRAY_BUFFER, srVB);
-        gl.vertexAttribPointer(mask_program.vertex, 3, gl.FLOAT, false, 3 * Float32Array.BYTES_PER_ELEMENT, 0);
-        gl.enableVertexAttribArray(mask_program.vertex);
-
-        gl.uniformMatrix4fv(mask_program.transform, false, maskMatrix);
-
-        gl.drawArrays(gl.TRIANGLES, 0, 2*3);
-
         //TEST
         gl.useProgram(tex_program);
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         gl.bindTexture(gl.TEXTURE_2D, targetTexture);
-        gl.drawArrays(gl.TRIANGLES, 0, 2*3);
+        //gl.drawArrays(gl.TRIANGLES, 0, 2*3);
 
     }
 
@@ -227,7 +241,7 @@
 
         init_stuff();
  
-        gl.clearColor(0.039, 0.543, 0.039, 1.0);
+        gl.clearColor(0.039, 0.543, 0.539, 1.0);
 
         canvas.addEventListener("mousemove", e => {
             mx = e.offsetX;
