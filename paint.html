@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+
+<html> 
+    <style>
+    
+        body{background-color: #0A0B0A;}
+        
+        canvas 
+        {
+            padding-left: 0;
+            padding-right: 0;
+            margin-left: auto;
+            margin-right: auto;
+            display: block;
+        }
+    </style>
+
+<script id="tex-vs" type="x-shader/x-vertex">
+    attribute vec3 vertex;
+    attribute vec2 inUV;
+    varying mediump vec2 UV;
+    uniform mat4 viewMatrix;
+    uniform mat4 projectionMatrix;
+    void main()
+    {
+        gl_Position =  projectionMatrix * viewMatrix * vec4(vertex,1);
+        UV = inUV;
+    }
+</script>
+
+<script id="tex-fs" type="x-shader/x-fragment">
+    varying mediump vec2 UV;
+    uniform sampler2D u_tex;
+    void main()
+    {
+        gl_FragColor = texture2D(u_tex, UV);
+    }
+</script>
+
+<script id="mask-vs" type="x-shader/x-vertex">
+    attribute vec3 vertex;
+    uniform mat4 transform;
+
+    void main()
+    {
+        gl_Position = transform * vec4(vertex,1);
+    }
+</script>
+
+<script id="mask-fs" type="x-shader/x-fragment">
+    void main()
+    {
+        gl_FragColor = vec4(1,1,1,0);
+    }
+</script>
+
+<script src="globals.js"></script>
+<script src="textureloader.js"></script>
+<script src="glutils.js"></script>
+<script src="mat4.js"></script>
+<script src="Gauss.js"></script>
+ 
+<script>
+ 
+    function init_gl(canvas) {
+        try {
+            gl = canvas.getContext("webgl");
+            if (!gl)
+                gl = canvas.getContext("experimental-webgl");
+            if (gl) {
+                
+                ensure_fullscreen();
+                gl.enable(gl.DEPTH_TEST);
+                //gl.disable(gl.DEPTH_TEST);
+                gl.depthFunc(gl.LEQUAL);
+
+                //gl.enable(gl.BLEND);
+                //gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+            }
+        } catch (e) {
+        }
+
+        if (!gl) {
+            alert("Could not initialise WebGL, sorry :-(");
+        }
+    }
+
+    function getRelMousePos(mousePos, screenWidth, screenHeight)
+    {
+        return [mousePos[0] / screenWidth - .5, mousePos[1] / screenHeight - .5];
+    }
+ 
+    function draw_scene() {
+        //CLEAR
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        
+        //RENDER DIRT AND MASK TO targetTexture
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, targetTexture, 0);
+        gl.useProgram(tex_program);
+        gl.bindTexture(gl.TEXTURE_2D, cubeTexture);
+        gl.viewport(0, 0, canvas.width, canvas.height);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, srVB);
+        gl.vertexAttribPointer(tex_program.vertex, 3, gl.FLOAT, false, 3 * Float32Array.BYTES_PER_ELEMENT, 0);
+        gl.enableVertexAttribArray(tex_program.vertex);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, srUVB);
+        gl.vertexAttribPointer(tex_program.inUV, 2, gl.FLOAT, false, 2 * Float32Array.BYTES_PER_ELEMENT, 0);
+        gl.enableVertexAttribArray(tex_program.inUV);
+
+        gl.uniformMatrix4fv(tex_program.projectionMatrix, false, perspMatrix);
+        gl.uniformMatrix4fv(tex_program.viewMatrix, false, viewMatrix);
+
+        gl.drawArrays(gl.TRIANGLES, 0, 12*3);
+
+    }
+
+    function ensure_fullscreen()
+    {
+        if ((canvas.width != window.innerWidth) || (canvas.height != window.innerHeight))
+        {
+            canvas.width  = window.innerWidth;
+            canvas.height = window.innerHeight;
+            gl.viewport(0, 0, canvas.width, canvas.height);
+            perspMatrix.perspective(1.745329, canvas.width/canvas.height, 0.1, 500.0);
+            return true;
+        }
+    }
+
+    function updateTexAspect(tex)
+    {
+        gl.bindTexture(gl.TEXTURE_2D, tex);
+        
+        const level = 0;
+        gl.texImage2D(gl.TEXTURE_2D, level, gl.RGBA,
+                      canvas.width, canvas.height, 0,
+                      gl.RGBA, gl.UNSIGNED_BYTE, null);
+
+    }
+
+    function setDefaultTexSettings(tex)
+    {
+        gl.bindTexture(gl.TEXTURE_2D, tex);
+
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    }
+
+    function mainLoop()
+    {
+        draw_scene();
+        if (ensure_fullscreen())
+        {
+            
+        }
+        frameID = requestAnimationFrame(mainLoop);
+    }
+
+    function init_stuff()
+    {
+        
+        tex_program  = glutils.makeProgram("tex-vs", "tex-fs");
+        mask_program = glutils.makeProgram("mask-vs", "mask-fs");
+
+        gl.useProgram(tex_program);
+
+        srVB    = gl.createBuffer();
+        srUVB   = gl.createBuffer();
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, srVB);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([1,1, 0, -1,1, 0, -1,-1, 0,
+                                                        -1,-1, 0, 1,-1, 0, 1,1, 0]), gl.STATIC_DRAW);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, srUVB);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0,0, 1,0, 1,1,
+                                                         1,1, 0,1, 0,0]), gl.STATIC_DRAW);
+
+        dirtTexture   = loadTexture("https://www.seekpng.com/png/full/388-3881588_transparent-dirt-texture-google-search-stock-images-decals.png");
+        carpetTexture = loadTexture("https://images.thdstatic.com/productImages/c00f1b70-7458-4b0b-99ff-ad4e62c83761/svn/sky-grey-trafficmaster-needlepunch-carpet-7pd5n660144h-64_600.jpg");
+
+        gl.activeTexture(gl.TEXTURE0);
+
+        targetTexture = gl.createTexture();
+        updateTexAspect(targetTexture);
+        setDefaultTexSettings(targetTexture);
+        tempFb = gl.createFramebuffer();
+        gl.bindFramebuffer(gl.FRAMEBUFFER, tempFb);
+
+    }
+
+    function init_matrices()
+    {
+        identity44  = new Mat4();
+        perspMatrix = new Mat4();
+        viewMatrix  = new Mat4();
+        maskMatrix  = new Mat4();
+        maskMatrix.setScale(0.5);
+        carpetMatrix = new Mat4();
+        carpetMatrix.translate([0.0,0.0,0.1]);
+    }
+ 
+    function webGLStart() {
+        canvas = document.getElementById("CUBE");
+        
+        init_matrices();
+
+        init_gl(canvas);
+
+        init_stuff();
+ 
+        gl.clearColor(0.039, 0.543, 0.039, 1.0);
+
+        canvas.addEventListener("mousemove", e => {
+            mx = e.offsetX;
+            my = e.offsetY;
+        });
+
+        mainLoop();
+    }
+ 
+</script> 
+ 
+<body onload="webGLStart();"> 
+    <canvas id="CUBE" style="border: none;"></canvas> 
+</body> 
+ 
+</html>
