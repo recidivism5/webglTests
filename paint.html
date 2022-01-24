@@ -142,7 +142,7 @@
         gl.drawArrays(gl.TRIANGLES, 0, 2*3);
         
         //RENDER DIRT
-        gl.stencilFunc(gl.EQUAL, 1, 0xff);
+        gl.stencilFunc(gl.NOTEQUAL, 1, 0xff);
         gl.stencilMask(0x00);
         gl.depthMask(true);
         gl.colorMask(true, true, true, true);
