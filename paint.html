@@ -89,6 +89,26 @@
     {
         return [mousePos[0] / screenWidth - .5, mousePos[1] / screenHeight - .5];
     }
+
+    function render_tex(vbr, uvbr, transformA, transformB, texture)
+    {
+        gl.useProgram(tex_program);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, vbr);
+        gl.vertexAttribPointer(tex_program.vertex, 3, gl.FLOAT, false, 3 * Float32Array.BYTES_PER_ELEMENT, 0);
+        gl.enableVertexAttribArray(tex_program.vertex);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, uvbr);
+        gl.vertexAttribPointer(tex_program.inUV, 2, gl.FLOAT, false, 2 * Float32Array.BYTES_PER_ELEMENT, 0);
+        gl.enableVertexAttribArray(tex_program.inUV);
+
+        gl.uniformMatrix4fv(tex_program.projectionMatrix, false, transformA);
+        gl.uniformMatrix4fv(tex_program.viewMatrix, false, transformB);
+
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+
+        gl.drawArrays(gl.TRIANGLES, 0, vbr.numPoints);
+    }
  
     function draw_scene() {
         //CLEAR
@@ -138,12 +158,9 @@
 
         gl.drawArrays(gl.TRIANGLES, 0, 2*3);
 
-        //TEST
-        gl.useProgram(tex_program);
-
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        gl.bindTexture(gl.TEXTURE_2D, targetTexture);
-        //gl.drawArrays(gl.TRIANGLES, 0, 2*3);
+        //RENDER CARPET
+        gl.disable(gl.STENCIL_TEST);
+        render_tex(srVB, srUVB, identity44, carpetMatrix, carpetTexture);
 
     }
 
@@ -203,6 +220,8 @@
         gl.bindBuffer(gl.ARRAY_BUFFER, srVB);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([1,1, 0, -1,1, 0, -1,-1, 0,
                                                         -1,-1, 0, 1,-1, 0, 1,1, 0]), gl.STATIC_DRAW);
+
+        srVB.numPoints = 2 * 3;
 
         gl.bindBuffer(gl.ARRAY_BUFFER, srUVB);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0,0, 1,0, 1,1,
