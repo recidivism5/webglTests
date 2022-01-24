@@ -131,6 +131,8 @@
         gl.vertexAttribPointer(mask_program.vertex, 3, gl.FLOAT, false, 3 * Float32Array.BYTES_PER_ELEMENT, 0);
         gl.enableVertexAttribArray(mask_program.vertex);
 
+        let rmp = getRelMousePos([mx, my], canvas.width, canvas.height);
+        maskMatrix.setPos([rmp[0],-rmp[1],0]);
         gl.uniformMatrix4fv(mask_program.transform, false, maskMatrix);
 
         gl.stencilOp(gl.KEEP, gl.KEEP, gl.REPLACE);
