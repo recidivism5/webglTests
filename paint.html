@@ -94,10 +94,10 @@
         //CLEAR
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         
-        //RENDER DIRT AND MASK TO targetTexture
-        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, targetTexture, 0);
+        //RENDER DIRT to targetTexture
+        gl.bindFramebuffer(gl.FRAMEBUFFER, tempFb);
         gl.useProgram(tex_program);
-        gl.bindTexture(gl.TEXTURE_2D, cubeTexture);
+        gl.bindTexture(gl.TEXTURE_2D, dirtTexture);
         gl.viewport(0, 0, canvas.width, canvas.height);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, srVB);
@@ -108,10 +108,28 @@
         gl.vertexAttribPointer(tex_program.inUV, 2, gl.FLOAT, false, 2 * Float32Array.BYTES_PER_ELEMENT, 0);
         gl.enableVertexAttribArray(tex_program.inUV);
 
-        gl.uniformMatrix4fv(tex_program.projectionMatrix, false, perspMatrix);
+        gl.uniformMatrix4fv(tex_program.projectionMatrix, false, identity44);
         gl.uniformMatrix4fv(tex_program.viewMatrix, false, viewMatrix);
 
-        gl.drawArrays(gl.TRIANGLES, 0, 12*3);
+        gl.drawArrays(gl.TRIANGLES, 0, 2*3);
+
+        //RENDER MASK TO targetTexture
+        gl.useProgram(mask_program);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, srVB);
+        gl.vertexAttribPointer(mask_program.vertex, 3, gl.FLOAT, false, 3 * Float32Array.BYTES_PER_ELEMENT, 0);
+        gl.enableVertexAttribArray(mask_program.vertex);
+
+        gl.uniformMatrix4fv(mask_program.transform, false, maskMatrix);
+
+        gl.drawArrays(gl.TRIANGLES, 0, 2*3);
+
+        //TEST
+        gl.useProgram(tex_program);
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.bindTexture(gl.TEXTURE_2D, targetTexture);
+        gl.drawArrays(gl.TRIANGLES, 0, 2*3);
 
     }
 
@@ -176,8 +194,8 @@
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0,0, 1,0, 1,1,
                                                          1,1, 0,1, 0,0]), gl.STATIC_DRAW);
 
-        dirtTexture   = loadTexture("https://www.seekpng.com/png/full/388-3881588_transparent-dirt-texture-google-search-stock-images-decals.png");
-        carpetTexture = loadTexture("https://images.thdstatic.com/productImages/c00f1b70-7458-4b0b-99ff-ad4e62c83761/svn/sky-grey-trafficmaster-needlepunch-carpet-7pd5n660144h-64_600.jpg");
+        dirtTexture   = loadTexture("https://raw.githubusercontent.com/recidivism5/webglTests/master/dirtTextureTransparent.png");
+        carpetTexture = loadTexture("https://raw.githubusercontent.com/recidivism5/webglTests/master/greyCarpetTexture.jpg");
 
         gl.activeTexture(gl.TEXTURE0);
 
@@ -186,7 +204,7 @@
         setDefaultTexSettings(targetTexture);
         tempFb = gl.createFramebuffer();
         gl.bindFramebuffer(gl.FRAMEBUFFER, tempFb);
-
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, targetTexture, 0);
     }
 
     function init_matrices()
