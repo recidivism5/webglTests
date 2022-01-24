@@ -33,7 +33,14 @@
     uniform sampler2D u_tex;
     void main()
     {
-        gl_FragColor = texture2D(u_tex, UV);
+        if (texture2D(u_tex, UV).a < 0.5)
+        {
+            discard;
+        }
+        else
+        {
+            gl_FragColor = texture2D(u_tex, UV);
+        }
     }
 </script>
 
