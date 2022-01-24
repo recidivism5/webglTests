@@ -236,8 +236,12 @@
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0,0, 1,0, 1,1,
                                                          1,1, 0,1, 0,0]), gl.STATIC_DRAW);
 
-        dirtTexture   = loadTexture("https://raw.githubusercontent.com/recidivism5/webglTests/master/dirtTextureTransparent.png");
-        carpetTexture = loadTexture("https://raw.githubusercontent.com/recidivism5/webglTests/master/greyCarpetTexture.jpg");
+        dirtTexture   = loadTexture("https://raw.githubusercontent.com/recidivism5/webglTests/master/dirtTextureTransparent256.png");
+        gl.texParameterf(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.texParameterf(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        carpetTexture = loadTexture("https://raw.githubusercontent.com/recidivism5/webglTests/master/greyCarpetTexture256.jpg");
+        gl.texParameterf(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.texParameterf(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
 
         gl.activeTexture(gl.TEXTURE0);
 
