@@ -140,7 +140,26 @@
 
         gl.bindTexture(gl.TEXTURE_2D, texture);
 
-        gl.drawArrays(gl.TRIANGLES, 0, vbr.numPoints);
+        gl.drawArrays(gl.TRIANGLES, 0, vbr.numVertices);
+    }
+
+    function render_texdiscard(vbr, uvbr, transformA, transformB, texture)
+    {
+        gl.useProgram(texdiscard_program);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, vbr);
+        gl.vertexAttribPointer(texdiscard_program.vertex, 3, gl.FLOAT, false, 3 * Float32Array.BYTES_PER_ELEMENT, 0);
+        gl.enableVertexAttribArray(texdiscard_program.vertex);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, uvbr);
+        gl.vertexAttribPointer(texdiscard_program.inUV, 2, gl.FLOAT, false, 2 * Float32Array.BYTES_PER_ELEMENT, 0);
+        gl.enableVertexAttribArray(texdiscard_program.inUV);
+
+        gl.uniformMatrix4fv(texdiscard_program.projectionMatrix, false, transformA);
+        gl.uniformMatrix4fv(texdiscard_program.viewMatrix, false, transformB);
+
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.drawArrays(gl.TRIANGLES, 0, vbr.numVertices);
     }
 
     function render_mask(vbr, transform)
@@ -153,12 +172,12 @@
 
         gl.uniformMatrix4fv(mask_program.transform, false, transform);
 
-        gl.drawArrays(gl.TRIANGLES, 0, vbr.numPoints);
+        gl.drawArrays(gl.TRIANGLES, 0, vbr.numVertices);
     }
  
     function draw_scene() {
         //CLEAR
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        //gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, tempFb);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -183,17 +202,16 @@
         gl.depthMask(true);
         gl.colorMask(true, true, true, true);
 
-        render_tex(srVB, srUVB, identity44, viewMatrix, dirtTexture);
+        render_texdiscard(srVB, srUVB, identity44, viewMatrix, dirtTexture);
 
         //RENDER CARPET
-        //gl.disable(gl.STENCIL_TEST);
-
-        //render_tex(srVB, srUVB, identity44, carpetMatrix, carpetTexture);
+        gl.disable(gl.STENCIL_TEST);
+        render_tex(srVB, srUVB, identity44, carpetMatrix, carpetTexture);
 
         //RENDER FINAL TEXTURE TO SCREEN
-        gl.disable(gl.STENCIL_TEST);
         gl.viewport(0,0,canvas.width,canvas.height);
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
         render_tex(srVB, srUVB, identity44, viewMatrix, targetTexture);
     }
 
@@ -243,8 +261,9 @@
     function init_stuff()
     {
         
-        tex_program  = glutils.makeProgram("tex-vs", "tex-fs");
-        mask_program = glutils.makeProgram("mask-vs", "mask-fs");
+        tex_program        = glutils.makeProgram("tex-vs", "tex-fs");
+        texdiscard_program = glutils.makeProgram("texdiscard-vs", "texdiscard-fs");
+        mask_program       = glutils.makeProgram("mask-vs", "mask-fs");
 
         gl.useProgram(tex_program);
 
@@ -255,7 +274,7 @@
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,1,0, -1,-1,0, 1,-1,0,
                                                           1,-1,0, 1,1,0, -1,1,0]), gl.STATIC_DRAW);
 
-        srVB.numPoints = 2 * 3;
+        srVB.numVertices = 2 * 3;
 
         gl.bindBuffer(gl.ARRAY_BUFFER, srUVB);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0,0, 0,1, 1,1,
@@ -302,7 +321,7 @@
 
         init_stuff();
  
-        gl.clearColor(0.039, 0.543, 0.539, 1.0);
+        gl.clearColor(0.039, 0.543, 0.539, 0.0);
 
         canvas.addEventListener("mousemove", e => {
             mx = e.offsetX;
